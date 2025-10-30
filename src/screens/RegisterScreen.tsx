@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, Alert, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
+import { TextInput, Button, Text, Surface } from 'react-native-paper';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import api from '../services/api';
@@ -11,6 +12,7 @@ export default function RegisterScreen({ navigation }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleRegister = async () => {
     if (!username || !email || !password) {
@@ -74,41 +76,122 @@ export default function RegisterScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={{ padding: 16, gap: 12 }}>
-      <Text style={{ fontSize: 32, fontWeight: 'bold', textAlign: 'center' }}>FleetPro</Text>
-      <Text style={{ fontSize: 24, fontWeight: 'bold' }}>Register</Text>
-      <Text>Username</Text>
-      <TextInput 
-        value={username} 
-        onChangeText={setUsername} 
-        autoCapitalize="none" 
-        style={{ borderWidth: 1, padding: 8, borderRadius: 6 }} 
-        placeholder="Enter your username"
-      />
-      <Text>Email</Text>
-      <TextInput 
-        value={email} 
-        onChangeText={setEmail} 
-        autoCapitalize="none" 
-        keyboardType="email-address"
-        style={{ borderWidth: 1, padding: 8, borderRadius: 6 }} 
-        placeholder="Enter your email"
-      />
-      <Text>Password</Text>
-      <TextInput 
-        value={password} 
-        onChangeText={setPassword} 
-        secureTextEntry 
-        style={{ borderWidth: 1, padding: 8, borderRadius: 6 }} 
-        placeholder="Enter your password"
-      />
-      <Button title={loading ? 'Creating...' : 'Register'} onPress={handleRegister} disabled={loading} />
-      <TouchableOpacity onPress={() => navigation.replace('Login')}>
-        <Text style={{ textAlign: 'center', color: '#007AFF', marginTop: 8 }}>
-          Already have an account? Login
-        </Text>
-      </TouchableOpacity>
-    </View>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Surface style={styles.surface} elevation={2}>
+          <Text variant="displaySmall" style={styles.title}>
+            FleetPro
+          </Text>
+          <Text variant="headlineMedium" style={styles.subtitle}>
+            Register
+          </Text>
+
+          <TextInput
+            label="Username"
+            value={username}
+            onChangeText={setUsername}
+            mode="outlined"
+            autoCapitalize="none"
+            style={styles.input}
+            left={<TextInput.Icon icon="account" />}
+          />
+
+          <TextInput
+            label="Email"
+            value={email}
+            onChangeText={setEmail}
+            mode="outlined"
+            autoCapitalize="none"
+            keyboardType="email-address"
+            style={styles.input}
+            left={<TextInput.Icon icon="email" />}
+          />
+
+          <TextInput
+            label="Password"
+            value={password}
+            onChangeText={setPassword}
+            mode="outlined"
+            secureTextEntry={!showPassword}
+            style={styles.input}
+            left={<TextInput.Icon icon="lock" />}
+            right={
+              <TextInput.Icon
+                icon={showPassword ? 'eye-off' : 'eye'}
+                onPress={() => setShowPassword(!showPassword)}
+              />
+            }
+          />
+
+          <Button
+            mode="contained"
+            onPress={handleRegister}
+            loading={loading}
+            disabled={loading}
+            style={styles.button}
+            contentStyle={styles.buttonContent}
+          >
+            {loading ? 'Creating account...' : 'Register'}
+          </Button>
+
+          <Button
+            mode="text"
+            onPress={() => navigation.replace('Login')}
+            style={styles.linkButton}
+          >
+            Already have an account? Login
+          </Button>
+        </Surface>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: 16,
+  },
+  surface: {
+    padding: 24,
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+  },
+  title: {
+    textAlign: 'center',
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: '#1976d2',
+  },
+  subtitle: {
+    textAlign: 'center',
+    marginBottom: 32,
+    color: '#666',
+  },
+  input: {
+    marginBottom: 16,
+  },
+  button: {
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  buttonContent: {
+    paddingVertical: 8,
+  },
+  linkButton: {
+    marginTop: 8,
+  },
+});
 
