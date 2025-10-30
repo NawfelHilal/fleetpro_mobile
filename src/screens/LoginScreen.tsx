@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, Alert } from 'react-native';
+import { View, Text, TextInput, Button, Alert, TouchableOpacity } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
@@ -28,12 +28,18 @@ export default function LoginScreen({ navigation }: Props) {
 
   return (
     <View style={{ padding: 16, gap: 12 }}>
+      <Text style={{ fontSize: 32, fontWeight: 'bold', textAlign: 'center' }}>FleetPro</Text>
       <Text style={{ fontSize: 24, fontWeight: 'bold' }}>Login</Text>
       <Text>Username</Text>
       <TextInput value={username} onChangeText={setUsername} autoCapitalize="none" style={{ borderWidth: 1, padding: 8, borderRadius: 6 }} />
       <Text>Password</Text>
       <TextInput value={password} onChangeText={setPassword} secureTextEntry style={{ borderWidth: 1, padding: 8, borderRadius: 6 }} />
       <Button title={loading ? '...' : 'Login'} onPress={handleLogin} disabled={loading} />
+      <TouchableOpacity onPress={() => navigation.replace('Register')}>
+        <Text style={{ textAlign: 'center', color: '#007AFF', marginTop: 8 }}>
+          Don't have an account? Register
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
