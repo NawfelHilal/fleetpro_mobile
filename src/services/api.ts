@@ -48,6 +48,7 @@ const api = axios.create({
     timeout: 10000, // 10 secondes de timeout pour éviter les requêtes infinies
 });
 
+// Gestion du header Authorization
 api.interceptors.request.use(
     async (config) => {
         try {
@@ -66,6 +67,96 @@ api.interceptors.request.use(
         return Promise.reject(error);
     }
 );
+
+// Rafraîchissement de token automatique
+let isRefreshing = false;
+let failedQueue: Array<{ resolve: (value?: unknown) => void; reject: (reason?: any) => void; }> = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+    failedQueue.forEach((prom) => {
+        if (error) {
+            prom.reject(error);
+        } else {
+            prom.resolve(token);
+        }
+    });
+    failedQueue = [];
+};
+
+api.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+        const originalRequest = error.config;
+        const status = error?.response?.status;
+
+        // N'essaie pas de refresh si endpoint d'auth lui-même
+        const isAuthEndpoint = typeof originalRequest?.url === 'string' && (
+            originalRequest.url.includes('/users/login') ||
+            originalRequest.url.includes('/users/register') ||
+            originalRequest.url.includes('/users/token/refresh')
+        );
+
+        if (status === 401 && !originalRequest._retry && !isAuthEndpoint) {
+            originalRequest._retry = true;
+            if (isRefreshing) {
+                return new Promise((resolve, reject) => {
+                    failedQueue.push({ resolve, reject });
+                })
+                    .then((token) => {
+                        if (token) {
+                            originalRequest.headers = originalRequest.headers || {};
+                            originalRequest.headers['Authorization'] = `Bearer ${token}`;
+                        }
+                        return api(originalRequest);
+                    })
+                    .catch((err) => Promise.reject(err));
+            }
+
+            isRefreshing = true;
+            try {
+                const refreshToken = await AsyncStorage.getItem('refreshToken');
+                if (!refreshToken) {
+                    throw new Error('No refresh token');
+                }
+                const { data } = await api.post('/users/token/refresh/', { refresh: refreshToken });
+                const newAccess = data?.access as string | undefined;
+                if (!newAccess) {
+                    throw new Error('No access token in refresh response');
+                }
+                await AsyncStorage.setItem('accessToken', newAccess);
+                api.defaults.headers.common['Authorization'] = `Bearer ${newAccess}`;
+                processQueue(null, newAccess);
+                originalRequest.headers = originalRequest.headers || {};
+                originalRequest.headers['Authorization'] = `Bearer ${newAccess}`;
+                return api(originalRequest);
+            } catch (err) {
+                processQueue(err as any, null);
+                await logout();
+                return Promise.reject(err);
+            } finally {
+                isRefreshing = false;
+            }
+        }
+
+        return Promise.reject(error);
+    }
+);
+
+export async function logout() {
+    try {
+        const refresh = await AsyncStorage.getItem('refreshToken');
+        if (refresh) {
+            // On tente de blacklister côté serveur (best effort)
+            try {
+                await api.post('/users/logout/', { refresh });
+            } catch (_e) {
+                // ignorer les erreurs de logout serveur
+            }
+        }
+    } finally {
+        await AsyncStorage.multiRemove(['accessToken', 'refreshToken']);
+    }
+}
 
 export default api;
 

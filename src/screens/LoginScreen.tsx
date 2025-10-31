@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
-import { TextInput, Button, Text, Surface } from 'react-native-paper';
+import { TextInput, Button, Text, Surface, Portal, Dialog } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
@@ -13,6 +13,32 @@ export default function LoginScreen({ navigation }: Props) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [resetVisible, setResetVisible] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+
+  const openReset = () => setResetVisible(true);
+  const closeReset = () => {
+    setResetVisible(false);
+    setResetEmail('');
+    setResetLoading(false);
+  };
+
+  const submitPasswordReset = async () => {
+    if (!resetEmail.trim()) {
+      Alert.alert('Error', 'Please enter your email');
+      return;
+    }
+    try {
+      setResetLoading(true);
+      await api.post('/users/password-reset/', { email: resetEmail.trim() });
+      Alert.alert('Email sent', 'If this email exists, a reset link was sent.');
+      closeReset();
+    } catch (e: any) {
+      Alert.alert('Error', e?.response?.data?.detail || 'Unable to send reset email');
+      setResetLoading(false);
+    }
+  };
 
   const handleLogin = async () => {
     if (!username.trim() || !password.trim()) {
@@ -132,6 +158,14 @@ export default function LoginScreen({ navigation }: Props) {
 
           <Button
             mode="text"
+            onPress={openReset}
+            style={styles.linkButton}
+          >
+            Forgot password?
+          </Button>
+
+          <Button
+            mode="text"
             onPress={() => navigation.replace('Register')}
             style={styles.linkButton}
           >
@@ -139,6 +173,29 @@ export default function LoginScreen({ navigation }: Props) {
           </Button>
         </Surface>
       </ScrollView>
+
+      <Portal>
+        <Dialog visible={resetVisible} onDismiss={closeReset}>
+          <Dialog.Title>Reset password</Dialog.Title>
+          <Dialog.Content>
+            <TextInput
+              label="Email"
+              value={resetEmail}
+              onChangeText={setResetEmail}
+              mode="outlined"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+            />
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={closeReset} disabled={resetLoading}>Cancel</Button>
+            <Button onPress={submitPasswordReset} loading={resetLoading} disabled={resetLoading}>
+              Send
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
     </KeyboardAvoidingView>
   );
 }

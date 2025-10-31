@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, ScrollView, FlatList, Alert } from 'react-native';
 import { TextInput, Button, Text, Surface, Card, Divider, ActivityIndicator } from 'react-native-paper';
-import api from '../services/api';
+import api, { logout } from '../services/api';
+import { useNavigation } from '@react-navigation/native';
 
 interface Ride {
   id: number;
@@ -20,6 +21,7 @@ export default function ReserveRideScreen() {
   const [rides, setRides] = useState<Ride[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
+  const navigation = useNavigation();
 
   const fetchRides = async () => {
     try {
@@ -62,9 +64,18 @@ export default function ReserveRideScreen() {
     }
   };
 
+  const handleLogout = async () => {
+    await logout();
+    // @ts-ignore - root stack has Login
+    navigation.reset({ index: 0, routes: [{ name: 'Login' as never }] });
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Surface style={styles.formSurface} elevation={2}>
+        <Button mode="text" onPress={handleLogout} style={styles.logoutButton} icon="logout">
+          Logout
+        </Button>
         <Text variant="headlineMedium" style={styles.title}>
           Reserve a Ride
         </Text>
@@ -189,6 +200,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 24,
     backgroundColor: '#ffffff',
+  },
+  logoutButton: {
+    alignSelf: 'flex-end',
+    marginBottom: 8,
   },
   title: {
     marginBottom: 24,
