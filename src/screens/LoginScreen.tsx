@@ -36,12 +36,11 @@ export default function LoginScreen({ navigation }: Props) {
       await AsyncStorage.setItem('accessToken', data.access);
       await AsyncStorage.setItem('refreshToken', data.refresh);
       
-      console.log('[Login] Tokens saved, navigating to ReserveRide...');
+      console.log('[Login] Tokens saved, navigating to Tabs...');
       setLoading(false); // Désactiver le loading avant la navigation
       
-      // Navigation après un court délai pour s'assurer que l'UI est mise à jour
       requestAnimationFrame(() => {
-        navigation.replace('ReserveRide');
+        navigation.replace('Tabs');
       });
       
     } catch (e: any) {
