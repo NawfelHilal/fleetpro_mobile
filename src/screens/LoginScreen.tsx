@@ -15,34 +15,64 @@ export default function LoginScreen({ navigation }: Props) {
   const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
+    if (!username.trim() || !password.trim()) {
+      Alert.alert('Error', 'Please enter both username and password');
+      return;
+    }
+
     try {
       setLoading(true);
       console.log('[Login] Attempting login with:', { username, password: '***' });
       console.log('[Login] API URL:', api.defaults.baseURL);
+      
       const { data } = await api.post('/users/login', { username, password });
+      
+      console.log('[Login] Login successful, saving tokens...');
+      
+      if (!data.access || !data.refresh) {
+        throw new Error('Invalid response from server: missing tokens');
+      }
+      
       await AsyncStorage.setItem('accessToken', data.access);
       await AsyncStorage.setItem('refreshToken', data.refresh);
-      navigation.replace('ReserveRide');
+      
+      console.log('[Login] Tokens saved, navigating to ReserveRide...');
+      setLoading(false); // Désactiver le loading avant la navigation
+      
+      // Navigation après un court délai pour s'assurer que l'UI est mise à jour
+      requestAnimationFrame(() => {
+        navigation.replace('ReserveRide');
+      });
+      
     } catch (e: any) {
       console.error('[Login] Error:', {
         message: e?.message,
         response: e?.response?.data,
         status: e?.response?.status,
         url: api.defaults.baseURL,
+        code: e?.code,
       });
+      
+      setLoading(false); // S'assurer que loading est désactivé en cas d'erreur
       
       let errorMessage = 'Please check credentials';
       
       if (!e.response) {
-        // Erreur réseau
-        errorMessage = `Network error: ${e.message || 'Unable to reach server'}\n\nAPI URL: ${api.defaults.baseURL}\n\nIf using mobile, you may need to configure EXPO_PUBLIC_API_URL with your computer's IP address.`;
+        // Erreur réseau (timeout, connexion refusée, etc.)
+        if (e.code === 'ECONNABORTED' || e.message?.includes('timeout')) {
+          const apiUrl = api.defaults.baseURL;
+          errorMessage = `Connection timeout!\n\nTrying to connect to:\n${apiUrl}\n\n✅ SOLUTIONS:\n\n1. Verify backend is running:\n   cd fleetpro-backend/docker\n   docker compose ps\n\n2. Find your PC's IP address:\n   Windows: ipconfig | findstr IPv4\n   Then update .env with:\n   EXPO_PUBLIC_API_URL=http://YOUR_IP:8000/api\n\n3. Check if backend accessible:\n   Open http://localhost:8000/api/docs/ in your browser\n\n4. Ensure mobile and PC are on the same WiFi network`;
+        } else if (e.code === 'ERR_NETWORK' || e.message?.includes('Network Error')) {
+          errorMessage = `Network error: Unable to reach server.\n\nAPI URL: ${api.defaults.baseURL}\n\n⚠️ TROUBLESHOOTING:\n\n1. Check backend: docker compose ps (in fleetpro-backend/docker)\n2. Test in browser: http://localhost:8000/api/docs/\n3. Find your IP: ipconfig | findstr IPv4\n4. Create .env file with your IP:\n   EXPO_PUBLIC_API_URL=http://YOUR_IP:8000/api\n\nSee TROUBLESHOOTING_API.md for details.`;
+        } else {
+          errorMessage = `Network error: ${e.message || 'Unable to reach server'}\n\nAPI URL: ${api.defaults.baseURL}\n\nSee TROUBLESHOOTING_API.md for help.`;
+        }
       } else {
+        // Erreur du serveur
         errorMessage = e?.response?.data?.detail || 'Please check credentials';
       }
       
       Alert.alert('Login failed', errorMessage);
-    } finally {
-      setLoading(false);
     }
   };
 

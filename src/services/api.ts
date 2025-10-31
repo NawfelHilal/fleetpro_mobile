@@ -29,10 +29,14 @@ const getBaseURL = () => {
     }
 
     // Fallback pour mobile (peut ne pas fonctionner sur téléphone physique)
-    const mobileUrl = 'http://10.6.3.13:8000/api';
-    console.warn('[API] Platform:', Platform.OS, 'using default:', mobileUrl);
-    console.warn('[API] WARNING: host.docker.internal may not work on physical devices!');
-    console.warn('[API] Configure EXPO_PUBLIC_API_URL with your computer IP (e.g., http://10.6.3.13:8000/api)');
+    // ⚠️ ATTENTION : Cette IP doit être remplacée par votre IP locale actuelle !
+    // Pour trouver votre IP : ipconfig | findstr IPv4 (Windows) ou ifconfig (Linux/Mac)
+    // Créez un fichier .env avec : EXPO_PUBLIC_API_URL=http://VOTRE_IP:8000/api
+    const mobileUrl = 'http://localhost:8000/api'; // ⚠️ Ne fonctionnera PAS sur téléphone physique !
+    console.error('[API] ⚠️ WARNING: No EXPO_PUBLIC_API_URL configured!');
+    console.error('[API] Using fallback:', mobileUrl);
+    console.error('[API] This will NOT work on physical devices!');
+    console.error('[API] Solution: Create .env file with: EXPO_PUBLIC_API_URL=http://YOUR_IP:8000/api');
     return mobileUrl;
 };
 
@@ -41,6 +45,7 @@ console.log('[API] Initialized with baseURL:', baseURL);
 
 const api = axios.create({
     baseURL: baseURL,
+    timeout: 10000, // 10 secondes de timeout pour éviter les requêtes infinies
 });
 
 api.interceptors.request.use(
